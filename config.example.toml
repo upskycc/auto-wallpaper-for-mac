@@ -1,0 +1,39 @@
+# 两次更换壁纸的间隔，单位分钟。取值 1–1440（最多一天一次）。
+interval_minutes = 30
+
+# 轮换顺序。
+# sequential：按 sources 从上到下依次换，到末尾再从头。
+# random：每次随机抽一张。
+mode = "sequential"
+
+# 应用到哪些桌面。
+# all：所有显示器。
+# main：仅主显示器。
+apply_to = "all"
+
+# true：息屏、合盖时挂起，等系统亮屏通知后再决定是否更换。
+# false：屏幕关着也按间隔尝试更换。
+pause_when_display_off = true
+
+# true：电池供电或低电量时不更换，挂起直到接入电源。
+# false：电池供电也照常更换。
+pause_on_battery = true
+
+# 下载远程图片的超时秒数。取值 1–120。仅对 [[sources]] 的 url 生效。
+download_timeout_secs = 15
+
+# 壁纸来源，至少写一项。每一项只填 url 或 path 其中一个。
+# url：http/https 直链，下载后只保留当前这一张，上限 20MB，支持 jpg/png/gif/webp。
+# path：本地文件，或目录下第一层图片（jpg/jpeg/png/webp/gif/heic/tif/tiff）。~ 会展开成用户主目录。
+
+[[sources]]
+url = "https://picsum.photos/id/1015/2560/1440"
+
+[[sources]]
+url = "https://picsum.photos/id/1018/2560/1440"
+
+[[sources]]
+url = "https://picsum.photos/id/1019/2560/1440"
+
+# [[sources]]
+# path = "~/Pictures/Wallpapers"
