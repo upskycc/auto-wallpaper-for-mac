@@ -41,7 +41,7 @@ path = "~/Pictures/Wallpapers"
 
 没有 `json_path` 时 `url` 当图片直链。有 `json_path` 时按点路径从 JSON 取地址，对象和数组都能拆。取到多张时按 `mode` 选一张。相对路径按接口地址补全。解析失败则跳过这次，桌面不动。
 
-改配置后，下次间隔生效。日志：`~/Library/Logs/wallflow.log`。
+改配置后，下次间隔生效。
 
 ## 在 Mac 上编译和安装
 
@@ -65,7 +65,7 @@ cargo build --release
 ~/Library/Application\ Support/wallflow/wallflow --uninstall
 ```
 
-`--uninstall` 会停止 LaunchAgent，并删除 `~/Library/LaunchAgents/com.wallflow.plist`、`~/Library/Application Support/wallflow/`、`~/Library/Logs/wallflow.log`。当前桌面壁纸保持不变。
+`--uninstall` 会停止 LaunchAgent，并删除 `~/Library/LaunchAgents/com.wallflow.plist` 和 `~/Library/Application Support/wallflow/`。当前桌面壁纸保持不变。
 
 手动常驻：
 

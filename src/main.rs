@@ -95,12 +95,11 @@ fn print_help() {
   wallflow                     常驻运行
   wallflow --once              立即更换一张
   wallflow --install           安装 LaunchAgent
-  wallflow --uninstall         停止并删除 LaunchAgent、程序目录和日志
+  wallflow --uninstall         停止并删除 LaunchAgent 和程序目录
   wallflow --write-config      写出示例配置
   wallflow --config <path>     指定配置文件
 
-默认配置: {}
-日志: ~/Library/Logs/wallflow.log",
+ 默认配置: {}",
         default_config_path().display()
     );
 }

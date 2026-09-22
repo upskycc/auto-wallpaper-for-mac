@@ -3,9 +3,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::config::write_example;
-use crate::paths::{
-    default_config_path, ensure_parent, installed_binary_path, launch_agent_path, log_path, support_dir,
-};
+use crate::paths::{default_config_path, ensure_parent, installed_binary_path, launch_agent_path, support_dir};
 
 pub fn install() -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|err| err.to_string())?;
@@ -44,7 +42,6 @@ pub fn uninstall() -> Result<(), String> {
     if support.exists() {
         fs::remove_dir_all(&support).map_err(|err| format!("删除程序目录失败: {err}"))?;
     }
-    remove_if_exists(&log_path())?;
     println!("已卸载 wallflow");
     Ok(())
 }

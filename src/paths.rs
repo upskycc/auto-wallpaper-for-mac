@@ -22,10 +22,6 @@ pub fn state_path() -> PathBuf {
     support_dir().join("last_index")
 }
 
-pub fn log_path() -> PathBuf {
-    home_dir().join("Library/Logs/wallflow.log")
-}
-
 pub fn launch_agent_path() -> PathBuf {
     home_dir().join("Library/LaunchAgents/com.wallflow.plist")
 }
