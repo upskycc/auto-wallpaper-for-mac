@@ -29,9 +29,17 @@ download_timeout_secs = 15
 [[sources]]
 url = "https://picsum.photos/id/1015/2560/1440"
 
+# JSON 接口：每次更换现场请求，按 json_path 取图片地址
+# data 可以是对象或数组，例如 data.url、data.0.url
+[[sources]]
+url = "https://wp.upx8.com/api.php?resolution=2560x1440&count=1&format=json"
+json_path = "data.url"
+
 [[sources]]
 path = "~/Pictures/Wallpapers"
 ```
+
+没有 `json_path` 时 `url` 当图片直链。有 `json_path` 时按点路径从 JSON 取地址，对象和数组都能拆。取到多张时按 `mode` 选一张。相对路径按接口地址补全。解析失败则跳过这次，桌面不动。
 
 改配置后，下次间隔生效。日志：`~/Library/Logs/wallflow.log`。
 
