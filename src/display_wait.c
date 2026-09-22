@@ -1,12 +1,28 @@
+#include <Availability.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/ps/IOPowerSources.h>
 #include <IOKit/ps/IOPSKeys.h>
 #include <stdint.h>
 
-#ifndef kIOMainPortDefault
-#define kIOMainPortDefault kIOMasterPortDefault
+static mach_port_t wallflow_iokit_port(void) {
+    mach_port_t port = MACH_PORT_NULL;
+#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 120000
+    if (__builtin_available(macOS 12.0, *)) {
+        if (IOMainPort(MACH_PORT_NULL, &port) == KERN_SUCCESS) {
+            return port;
+        }
+        return MACH_PORT_NULL;
+    }
 #endif
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    if (IOMasterPort(MACH_PORT_NULL, &port) != KERN_SUCCESS) {
+        port = kIOMasterPortDefault;
+    }
+#pragma clang diagnostic pop
+    return port;
+}
 
 static int display_is_on(io_service_t service) {
     CFNumberRef num = IORegistryEntryCreateCFProperty(
@@ -44,7 +60,7 @@ static void interest(
 
 int wallflow_wait_until_display_on(void) {
     io_service_t service = IOServiceGetMatchingService(
-        kIOMainPortDefault, IOServiceNameMatching("IODisplayWrangler"));
+        wallflow_iokit_port(), IOServiceNameMatching("IODisplayWrangler"));
     if (!service) {
         return 1;
     }
@@ -53,7 +69,7 @@ int wallflow_wait_until_display_on(void) {
         return 1;
     }
 
-    IONotificationPortRef port = IONotificationPortCreate(kIOMainPortDefault);
+    IONotificationPortRef port = IONotificationPortCreate(wallflow_iokit_port());
     if (!port) {
         IOObjectRelease(service);
         return 1;
