@@ -34,6 +34,8 @@ impl Default for ApplyTo {
 pub struct Source {
     pub url: Option<String>,
     pub path: Option<String>,
+    #[serde(default)]
+    pub json_path: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -60,6 +62,17 @@ fn default_timeout() -> u64 {
     15
 }
 
+fn validate_json_path(index: usize, json_path: &str) -> Result<(), String> {
+    let json_path = json_path.trim();
+    if json_path.is_empty() {
+        return Err(format!("sources[{index}].json_path 不能为空"));
+    }
+    if json_path.starts_with('.') || json_path.ends_with('.') || json_path.contains("..") {
+        return Err(format!("sources[{index}].json_path 格式错误"));
+    }
+    Ok(())
+}
+
 impl Config {
     pub fn load(path: &Path) -> Result<Self, String> {
         let raw = fs::read_to_string(path).map_err(|err| format!("读取配置失败: {err}"))?;
@@ -79,13 +92,19 @@ impl Config {
             return Err("至少需要一个 [[sources]]".into());
         }
         for (index, source) in self.sources.iter().enumerate() {
-            match (&source.url, &source.path) {
-                (Some(url), None) => {
+            match (&source.url, &source.path, source.json_path.as_deref()) {
+                (Some(url), None, json_path) => {
                     if !(url.starts_with("http://") || url.starts_with("https://")) {
                         return Err(format!("sources[{index}].url 必须是 http 或 https"));
                     }
+                    if let Some(json_path) = json_path {
+                        validate_json_path(index, json_path)?;
+                    }
                 }
-                (None, Some(path)) if !path.trim().is_empty() => {}
+                (None, Some(path), None) if !path.trim().is_empty() => {}
+                (None, Some(_), Some(_)) => {
+                    return Err(format!("sources[{index}].json_path 只能和 url 一起使用"));
+                }
                 _ => return Err(format!("sources[{index}] 需要填写 url 或 path 其中一项")),
             }
         }
@@ -135,5 +154,42 @@ sources = []
         let config: Config = toml::from_str(EXAMPLE_CONFIG).unwrap();
         assert_eq!(config.interval_secs(), 1800);
         assert!(config.pause_on_battery);
+    }
+
+    #[test]
+    fn json_path_with_url_is_valid() {
+        let raw = r#"
+interval_minutes = 10
+[[sources]]
+url = "https://wp.upx8.com/api.php?format=json"
+json_path = "data.url"
+"#;
+        let config: Config = toml::from_str(raw).unwrap();
+        config.validate().unwrap();
+        assert_eq!(config.sources[0].json_path.as_deref(), Some("data.url"));
+    }
+
+    #[test]
+    fn json_path_cannot_pair_with_path() {
+        let raw = r#"
+interval_minutes = 10
+[[sources]]
+path = "~/Pictures"
+json_path = "data.url"
+"#;
+        let config: Config = toml::from_str(raw).unwrap();
+        assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn json_path_rejects_empty() {
+        let raw = r#"
+interval_minutes = 10
+[[sources]]
+url = "https://example.com/api"
+json_path = "  "
+"#;
+        let config: Config = toml::from_str(raw).unwrap();
+        assert!(config.validate().is_err());
     }
 }

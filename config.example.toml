@@ -24,6 +24,8 @@ download_timeout_secs = 15
 
 # 壁纸来源，至少写一项。每一项只填 url 或 path 其中一个。
 # url：http/https 直链，下载后只保留当前这一张，上限 20MB，支持 jpg/png/gif/webp。
+# json_path：可选。填写后把 url 当 JSON 接口，按点路径取图片地址；data 既可以是对象也可以是数组。
+#           每次更换都会重新请求接口。相对路径按接口地址补成绝对 URL。
 # path：本地文件，或目录下第一层图片（jpg/jpeg/png/webp/gif/heic/tif/tiff）。~ 会展开成用户主目录。
 
 [[sources]]
@@ -34,6 +36,11 @@ url = "https://picsum.photos/id/1018/2560/1440"
 
 [[sources]]
 url = "https://picsum.photos/id/1019/2560/1440"
+
+# JSON 接口示例：返回 {"data": {"url": "http://..."}} 或 {"data": [{"url": "..."}]}
+# [[sources]]
+# url = "https://wp.upx8.com/api.php?resolution=2560x1440&count=1&format=json"
+# json_path = "data.url"
 
 # [[sources]]
 # path = "~/Pictures/Wallpapers"

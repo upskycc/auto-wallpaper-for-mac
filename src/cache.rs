@@ -6,6 +6,7 @@ use std::time::Duration;
 use crate::paths::{cache_dir, ensure_parent};
 
 const MAX_BYTES: usize = 20 * 1024 * 1024;
+const MAX_JSON_BYTES: usize = 1024 * 1024;
 
 pub fn cached_or_download(url: &str, timeout_secs: u64) -> Result<PathBuf, String> {
     let dest = cache_path(url);
@@ -13,6 +14,24 @@ pub fn cached_or_download(url: &str, timeout_secs: u64) -> Result<PathBuf, Strin
         download(url, &dest, timeout_secs)?;
     }
     Ok(dest)
+}
+
+pub fn fetch_json(url: &str, timeout_secs: u64) -> Result<String, String> {
+    let agent = agent(timeout_secs);
+    let response = agent.get(url).call().map_err(|err| format!("请求 JSON 失败: {err}"))?;
+    if !(200..300).contains(&response.status()) {
+        return Err(format!("请求 JSON 失败，状态码 {}", response.status()));
+    }
+    let reader = response.into_reader();
+    let mut buf = Vec::new();
+    reader
+        .take((MAX_JSON_BYTES as u64) + 1)
+        .read_to_end(&mut buf)
+        .map_err(|err| format!("读取 JSON 失败: {err}"))?;
+    if buf.len() > MAX_JSON_BYTES {
+        return Err("JSON 超过 1MB 限制".into());
+    }
+    String::from_utf8(buf).map_err(|err| format!("JSON 不是合法 UTF-8: {err}"))
 }
 
 pub fn keep_only(path: &Path) {
@@ -46,13 +65,17 @@ fn cache_path(url: &str) -> PathBuf {
     cache_dir().join(format!("{name}.img"))
 }
 
-fn download(url: &str, dest: &Path, timeout_secs: u64) -> Result<(), String> {
-    ensure_parent(dest).map_err(|err| err.to_string())?;
-    let agent = ureq::builder()
+fn agent(timeout_secs: u64) -> ureq::Agent {
+    ureq::builder()
         .timeout_connect(Duration::from_secs(timeout_secs))
         .timeout_read(Duration::from_secs(timeout_secs))
         .user_agent("wallflow/1.0")
-        .build();
+        .build()
+}
+
+fn download(url: &str, dest: &Path, timeout_secs: u64) -> Result<(), String> {
+    ensure_parent(dest).map_err(|err| err.to_string())?;
+    let agent = agent(timeout_secs);
     let response = agent.get(url).call().map_err(|err| format!("下载失败: {err}"))?;
     if !(200..300).contains(&response.status()) {
         return Err(format!("下载失败，状态码 {}", response.status()));

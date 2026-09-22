@@ -56,32 +56,38 @@ pub fn rotate_once(config: &Config) {
         return;
     };
     let item = &items[index];
-    let result = resolve_file(item, config.download_timeout_secs).and_then(|path| {
+    let result = resolve_file(item, config.download_timeout_secs, random).and_then(|(path, label)| {
         apply_desktop(&path, &config.apply_to)?;
-        if matches!(item, WallpaperRef::Url(_)) {
+        if matches!(item, WallpaperRef::Url(_) | WallpaperRef::JsonApi { .. }) {
             crate::cache::keep_only(&path);
         }
-        Ok(())
+        Ok(label)
     });
     state.last_index = Some(index);
     state.save();
     match result {
-        Ok(()) => log::info(&format!("已更换壁纸: {}", display_item(item))),
+        Ok(label) => log::info(&format!("已更换壁纸: {label}")),
         Err(err) => log::warn(&err),
     }
 }
 
-fn resolve_file(item: &WallpaperRef, timeout_secs: u64) -> Result<std::path::PathBuf, String> {
+fn resolve_file(
+    item: &WallpaperRef,
+    timeout_secs: u64,
+    random: bool,
+) -> Result<(std::path::PathBuf, String), String> {
     match item {
-        WallpaperRef::File(path) => Ok(path.clone()),
-        WallpaperRef::Url(url) => cached_or_download(url, timeout_secs),
-    }
-}
-
-fn display_item(item: &WallpaperRef) -> String {
-    match item {
-        WallpaperRef::Url(url) => url.clone(),
-        WallpaperRef::File(path) => path.display().to_string(),
+        WallpaperRef::File(path) => Ok((path.clone(), path.display().to_string())),
+        WallpaperRef::Url(url) => {
+            let path = cached_or_download(url, timeout_secs)?;
+            Ok((path, url.clone()))
+        }
+        WallpaperRef::JsonApi { url, json_path } => {
+            let raw = crate::cache::fetch_json(url, timeout_secs)?;
+            let image_url = crate::sources::pick_json_image_url(&raw, json_path, url, random)?;
+            let path = cached_or_download(&image_url, timeout_secs)?;
+            Ok((path, image_url))
+        }
     }
 }
 
