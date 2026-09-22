@@ -1,5 +1,7 @@
+use std::fs;
+use std::path::Path;
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 use crate::cache::cached_or_download;
 use crate::config::{Config, RotateMode};
@@ -9,8 +11,9 @@ use crate::sources::{collect_items, next_index, WallpaperRef};
 use crate::state::RotateState;
 use crate::wallpaper::apply_desktop;
 
-pub fn run_loop(config_path: &std::path::Path) {
+pub fn run_loop(config_path: &Path) {
     let mut last_rotate: Option<Instant> = None;
+    let mut last_mtime = config_mtime(config_path);
     loop {
         match Config::load(config_path) {
             Ok(config) => {
@@ -22,14 +25,18 @@ pub fn run_loop(config_path: &std::path::Path) {
                         power::wait_until_ac_power();
                     }
                     if !power::current().allow_work(config.pause_when_display_off, config.pause_on_battery) {
-                        thread::sleep(Duration::from_secs(60));
+                        wait_for_interval_or_config_change(config_path, last_mtime, 60);
                     }
                     continue;
                 }
+                let mtime = config_mtime(config_path);
+                let config_changed = mtime != last_mtime;
+                last_mtime = mtime;
                 let interval = Duration::from_secs(config.interval_secs());
                 let due = last_rotate
                     .map(|started| started.elapsed() >= interval)
-                    .unwrap_or(true);
+                    .unwrap_or(true)
+                    || config_changed;
                 if due {
                     rotate_once(&config);
                     last_rotate = Some(Instant::now());
@@ -37,11 +44,17 @@ pub fn run_loop(config_path: &std::path::Path) {
                 let remaining = last_rotate
                     .map(|started| interval.saturating_sub(started.elapsed()))
                     .unwrap_or(interval);
-                sleep_with_leeway(remaining.as_secs().max(1));
+                if wait_for_interval_or_config_change(
+                    config_path,
+                    last_mtime,
+                    remaining.as_secs().max(1),
+                ) {
+                    continue;
+                }
             }
             Err(err) => {
                 log::warn(&err);
-                thread::sleep(Duration::from_secs(60));
+                wait_for_interval_or_config_change(config_path, last_mtime, 60);
             }
         }
     }
@@ -91,7 +104,21 @@ fn resolve_file(
     }
 }
 
-fn sleep_with_leeway(secs: u64) {
-    let leeway = (secs / 8).clamp(15, 180);
-    thread::sleep(Duration::from_secs(secs.saturating_add(leeway / 2)));
+fn config_mtime(path: &Path) -> Option<SystemTime> {
+    fs::metadata(path).and_then(|meta| meta.modified()).ok()
+}
+
+fn wait_for_interval_or_config_change(path: &Path, known: Option<SystemTime>, secs: u64) -> bool {
+    let deadline = Instant::now() + Duration::from_secs(secs);
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return false;
+        }
+        thread::sleep(remaining.min(Duration::from_secs(5)));
+        if config_mtime(path) != known {
+            thread::sleep(Duration::from_millis(200));
+            return true;
+        }
+    }
 }
