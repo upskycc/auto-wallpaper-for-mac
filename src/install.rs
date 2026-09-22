@@ -3,7 +3,9 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::config::write_example;
-use crate::paths::{default_config_path, ensure_parent, installed_binary_path, launch_agent_path, support_dir};
+use crate::paths::{
+    default_config_path, ensure_parent, installed_binary_path, launch_agent_path, log_path, support_dir,
+};
 
 pub fn install() -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|err| err.to_string())?;
@@ -34,6 +36,26 @@ pub fn install() -> Result<(), String> {
     Ok(())
 }
 
+pub fn uninstall() -> Result<(), String> {
+    let plist_path = launch_agent_path();
+    unload_agent(&plist_path);
+    remove_if_exists(&plist_path)?;
+    let support = support_dir();
+    if support.exists() {
+        fs::remove_dir_all(&support).map_err(|err| format!("删除程序目录失败: {err}"))?;
+    }
+    remove_if_exists(&log_path())?;
+    println!("已卸载 wallflow");
+    Ok(())
+}
+
+fn remove_if_exists(path: &Path) -> Result<(), String> {
+    if path.exists() {
+        fs::remove_file(path).map_err(|err| format!("删除 {} 失败: {err}", path.display()))?;
+    }
+    Ok(())
+}
+
 fn write_plist(path: &Path, binary: &Path, config: &Path) -> Result<(), String> {
     ensure_parent(path).map_err(|err| err.to_string())?;
     let body = include_str!("../macos/com.wallflow.plist")
@@ -48,7 +70,7 @@ fn reload_agent(path: &Path) -> Result<(), String> {
         crate::log::warn("当前不是 macOS，已写入 plist，未执行 launchctl");
         return Ok(());
     }
-    let _ = Command::new("launchctl").args(["unload", &path.display().to_string()]).status();
+    unload_agent(path);
     let status = Command::new("launchctl")
         .args(["load", "-w", &path.display().to_string()])
         .status()
@@ -58,6 +80,15 @@ fn reload_agent(path: &Path) -> Result<(), String> {
     } else {
         Err("launchctl load 失败".into())
     }
+}
+
+fn unload_agent(path: &Path) {
+    if cfg!(not(target_os = "macos")) {
+        return;
+    }
+    let _ = Command::new("launchctl")
+        .args(["unload", &path.display().to_string()])
+        .status();
 }
 
 fn xml_escape(value: &str) -> String {

@@ -53,13 +53,27 @@ cargo build --release
 
 `--install` 会复制二进制、写出默认配置、安装 LaunchAgent。
 
+卸载：
+
+```bash
+./target/release/wallflow --uninstall
+```
+
+或已安装后：
+
+```bash
+~/Library/Application\ Support/wallflow/wallflow --uninstall
+```
+
+`--uninstall` 会停止 LaunchAgent，并删除 `~/Library/LaunchAgents/com.wallflow.plist`、`~/Library/Application Support/wallflow/`、`~/Library/Logs/wallflow.log`。当前桌面壁纸保持不变。
+
 手动常驻：
 
 ```bash
 ./target/release/wallflow --config ~/Library/Application\ Support/wallflow/config.toml
 ```
 
-停止：
+仅停止、不删除文件：
 
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.wallflow.plist

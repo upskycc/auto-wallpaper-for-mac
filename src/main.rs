@@ -14,7 +14,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use crate::config::{resolve_config_path, write_example, Config};
-use crate::install::install;
+use crate::install::{install, uninstall};
 use crate::paths::default_config_path;
 use crate::scheduler::{rotate_once, run_loop};
 
@@ -33,6 +33,7 @@ fn run() -> Result<(), String> {
     let mut config_path: Option<PathBuf> = None;
     let mut once = false;
     let mut do_install = false;
+    let mut do_uninstall = false;
     let mut write_config = false;
     let mut i = 0;
     while i < args.len() {
@@ -43,6 +44,7 @@ fn run() -> Result<(), String> {
             }
             "--once" => once = true,
             "--install" => do_install = true,
+            "--uninstall" => do_uninstall = true,
             "--write-config" => write_config = true,
             "--help" | "-h" => {
                 print_help();
@@ -60,8 +62,14 @@ fn run() -> Result<(), String> {
         return Ok(());
     }
 
+    if do_install && do_uninstall {
+        return Err("不能同时使用 --install 和 --uninstall".into());
+    }
     if do_install {
         return install();
+    }
+    if do_uninstall {
+        return uninstall();
     }
 
     let path = resolve_config_path(config_path);
@@ -87,6 +95,7 @@ fn print_help() {
   wallflow                     常驻运行
   wallflow --once              立即更换一张
   wallflow --install           安装 LaunchAgent
+  wallflow --uninstall         停止并删除 LaunchAgent、程序目录和日志
   wallflow --write-config      写出示例配置
   wallflow --config <path>     指定配置文件
 

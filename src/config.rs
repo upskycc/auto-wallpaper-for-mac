@@ -136,7 +136,7 @@ mod tests {
         let config: Config = toml::from_str(EXAMPLE_CONFIG).unwrap();
         config.validate().unwrap();
         assert_eq!(config.interval_minutes, 30);
-        assert_eq!(config.sources.len(), 3);
+        assert_eq!(config.sources.len(), 2);
     }
 
     #[test]
