@@ -76,7 +76,7 @@ cargo build --release
 仅停止、不删除文件：
 
 ```bash
-launchctl unload ~/Library/LaunchAgents/com.wallflow.plist
+launchctl bootout gui/$(id -u)/com.wallflow
 ```
 
 ## 省电
