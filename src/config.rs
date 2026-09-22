@@ -51,6 +51,8 @@ pub struct Config {
     pub pause_on_battery: bool,
     #[serde(default = "default_timeout")]
     pub download_timeout_secs: u64,
+    #[serde(default)]
+    pub log_enabled: bool,
     pub sources: Vec<Source>,
 }
 
@@ -136,6 +138,7 @@ mod tests {
         let config: Config = toml::from_str(EXAMPLE_CONFIG).unwrap();
         config.validate().unwrap();
         assert_eq!(config.interval_minutes, 30);
+        assert!(!config.log_enabled);
         assert_eq!(config.sources.len(), 2);
     }
 
@@ -179,6 +182,17 @@ json_path = "data.url"
 "#;
         let config: Config = toml::from_str(raw).unwrap();
         assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn log_enabled_defaults_off() {
+        let raw = r#"
+interval_minutes = 10
+[[sources]]
+url = "https://example.com/a.jpg"
+"#;
+        let config: Config = toml::from_str(raw).unwrap();
+        assert!(!config.log_enabled);
     }
 
     #[test]

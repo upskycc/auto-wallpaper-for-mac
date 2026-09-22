@@ -26,11 +26,11 @@ pub fn install() -> Result<(), String> {
     let plist_path = launch_agent_path();
     write_plist(&plist_path, &dest, &config)?;
     reload_agent(&plist_path)?;
-    crate::log::info(&format!(
+    println!(
         "已安装 LaunchAgent: {} ，配置: {}",
         plist_path.display(),
         config.display()
-    ));
+    );
     Ok(())
 }
 
@@ -64,7 +64,7 @@ fn write_plist(path: &Path, binary: &Path, config: &Path) -> Result<(), String> 
 
 fn reload_agent(path: &Path) -> Result<(), String> {
     if cfg!(not(target_os = "macos")) {
-        crate::log::warn("当前不是 macOS，已写入 plist，未执行 launchctl");
+        eprintln!("当前不是 macOS，已写入 plist，未执行 launchctl");
         return Ok(());
     }
     unload_agent();

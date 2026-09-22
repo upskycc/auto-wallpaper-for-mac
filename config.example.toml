@@ -22,6 +22,10 @@ pause_on_battery = true
 # 下载远程图片的超时秒数。取值 1–120。仅对 [[sources]] 的 url 生效。
 download_timeout_secs = 15
 
+# true：守护进程把更换、跳过、错误打到 stderr。
+# false：不输出运行日志。--install / --uninstall / --help 等命令行提示仍会打印。
+log_enabled = false
+
 # 壁纸来源，至少写一项。每一项只填 url 或 path 其中一个。
 # url：http/https 直链，下载后只保留当前这一张，上限 20MB，支持 jpg/png/gif/webp。
 # json_path：可选。填写后把 url 当 JSON 接口，按点路径取图片地址；data 既可以是对象也可以是数组。

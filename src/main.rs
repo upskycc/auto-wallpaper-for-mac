@@ -22,7 +22,7 @@ fn main() -> ExitCode {
     match run() {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
-            crate::log::warn(&err);
+            eprintln!("{err}");
             ExitCode::FAILURE
         }
     }
@@ -75,9 +75,10 @@ fn run() -> Result<(), String> {
     let path = resolve_config_path(config_path);
     if !path.exists() {
         write_example(&path)?;
-        crate::log::info(&format!("已创建默认配置 {}", path.display()));
+        println!("已创建默认配置 {}", path.display());
     }
     let config = Config::load(&path)?;
+    crate::log::set_enabled(config.log_enabled);
     if once {
         rotate_once(&config);
         return Ok(());
