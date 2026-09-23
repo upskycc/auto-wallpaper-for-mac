@@ -43,13 +43,35 @@ fn emit(message: &str) {
     if !ENABLED.load(Ordering::Relaxed) {
         return;
     }
+    let line = format!("{} {message}", timestamp());
     let mut sink = SINK.lock().unwrap();
     if let Some(file) = sink.as_mut().and_then(|sink| sink.file.as_mut()) {
-        let _ = writeln!(file, "{message}");
+        let _ = writeln!(file, "{line}");
         let _ = file.flush();
         return;
     }
-    eprintln!("{message}");
+    eprintln!("{line}");
+}
+
+fn timestamp() -> String {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_secs() as libc::time_t)
+        .unwrap_or(0);
+    let mut tm: libc::tm = unsafe { std::mem::zeroed() };
+    let ok = unsafe { !libc::localtime_r(&secs, &mut tm).is_null() };
+    if !ok {
+        return "0000-00-00 00:00:00".into();
+    }
+    format!(
+        "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
+        tm.tm_year + 1900,
+        tm.tm_mon + 1,
+        tm.tm_mday,
+        tm.tm_hour,
+        tm.tm_min,
+        tm.tm_sec
+    )
 }
 
 fn open_append(path: &Path) -> std::io::Result<File> {
@@ -78,5 +100,18 @@ mod tests {
         assert!(text.contains("hello"));
         configure(false, None);
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn timestamp_has_expected_shape() {
+        let stamp = timestamp();
+        assert_eq!(stamp.len(), 19);
+        assert_eq!(&stamp[4..5], "-");
+        assert_eq!(&stamp[10..11], " ");
+        assert_eq!(&stamp[13..14], ":");
+        assert_eq!(&stamp[16..17], ":");
+        assert!(stamp.chars().enumerate().all(|(index, ch)| {
+            matches!(index, 4 | 7 | 10 | 13 | 16) || ch.is_ascii_digit()
+        }));
     }
 }

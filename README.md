@@ -58,7 +58,7 @@ log_enabled = true
 log_file = "~/Library/Logs/wallflow.log"
 ```
 
-`log_file` 不填时日志写到 stderr；LaunchAgent 不会自动把 stderr 存成文件，所以装成守护进程后想留档就填 `log_file`。父目录会自动创建，文件以追加方式写入。改动保存后最多约 5 秒生效。
+`log_file` 不填时日志写到 stderr；LaunchAgent 不会自动把 stderr 存成文件，所以装成守护进程后想留档就填 `log_file`。父目录会自动创建，文件以追加方式写入。每行以本地时间开头，格式 `2022-01-01 01:01:01`。改动保存后最多约 5 秒生效。
 
 ## 在 Mac 上编译和安装
 
