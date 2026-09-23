@@ -26,7 +26,12 @@ pub fn run_loop(config_path: &Path) {
                         power::wait_until_ac_power();
                     }
                     if !power::current().allow_work(config.pause_when_display_off, config.pause_on_battery) {
-                        wait_for_interval_or_config_change(config_path, last_mtime, 60);
+                        wait_for_interval_or_config_change(
+                            config_path,
+                            last_mtime,
+                            60,
+                            config.pause_when_display_off,
+                        );
                     }
                     continue;
                 }
@@ -49,13 +54,14 @@ pub fn run_loop(config_path: &Path) {
                     config_path,
                     last_mtime,
                     remaining.as_secs().max(1),
+                    config.pause_when_display_off,
                 ) {
                     continue;
                 }
             }
             Err(err) => {
                 log::warn(&err);
-                wait_for_interval_or_config_change(config_path, last_mtime, 60);
+                wait_for_interval_or_config_change(config_path, last_mtime, 60, false);
             }
         }
     }
@@ -109,7 +115,12 @@ fn config_mtime(path: &Path) -> Option<SystemTime> {
     fs::metadata(path).and_then(|meta| meta.modified()).ok()
 }
 
-fn wait_for_interval_or_config_change(path: &Path, known: Option<SystemTime>, secs: u64) -> bool {
+fn wait_for_interval_or_config_change(
+    path: &Path,
+    known: Option<SystemTime>,
+    secs: u64,
+    pause_when_display_off: bool,
+) -> bool {
     let deadline = Instant::now() + Duration::from_secs(secs);
     loop {
         let remaining = deadline.saturating_duration_since(Instant::now());
@@ -117,6 +128,9 @@ fn wait_for_interval_or_config_change(path: &Path, known: Option<SystemTime>, se
             return false;
         }
         thread::sleep(remaining.min(Duration::from_secs(5)));
+        if pause_when_display_off && !power::current().display_on {
+            return true;
+        }
         if config_mtime(path) != known {
             thread::sleep(Duration::from_millis(200));
             return true;

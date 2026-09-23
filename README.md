@@ -96,7 +96,7 @@ launchctl bootout gui/$(id -u)/com.wallflow
 
 ## 省电
 
-- 屏幕关闭或睡眠时挂起等待系统亮屏通知，不轮询、不换壁纸；亮屏后若间隔已到则马上更换
+- 屏幕关闭、合盖（无外接屏）或显示器睡眠时挂起，等亮屏后再决定是否更换；Power Nap 暗唤醒不算亮屏
 - 电池供电或低电量时不更换壁纸，挂起等待接入电源
 - 定时带 leeway，低优先级 IO，LaunchAgent 标成 Background
 - 远程图只保留当前这一张：`~/Library/Application Support/wallflow/cache/`，换成功后删除旧缓存

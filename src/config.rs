@@ -150,9 +150,12 @@ mod tests {
     fn example_config_parses() {
         let config: Config = toml::from_str(EXAMPLE_CONFIG).unwrap();
         config.validate().unwrap();
-        assert_eq!(config.interval_minutes, 30);
-        assert!(!config.log_enabled);
-        assert_eq!(config.log_file, None);
+        assert_eq!(config.interval_minutes, 1);
+        assert!(config.log_enabled);
+        assert_eq!(
+            config.log_file.as_deref(),
+            Some("~/Library/Logs/wallflow.log")
+        );
         assert_eq!(config.sources.len(), 2);
     }
 
@@ -169,7 +172,7 @@ sources = []
     #[test]
     fn interval_is_minutes() {
         let config: Config = toml::from_str(EXAMPLE_CONFIG).unwrap();
-        assert_eq!(config.interval_secs(), 1800);
+        assert_eq!(config.interval_secs(), 60);
         assert!(config.pause_on_battery);
     }
 

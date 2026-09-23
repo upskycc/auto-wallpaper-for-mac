@@ -35,6 +35,7 @@ pub fn wait_until_ac_power() {
 
 #[cfg(target_os = "macos")]
 extern "C" {
+    fn wallflow_display_is_on() -> i32;
     fn wallflow_wait_until_display_on() -> i32;
     fn wallflow_wait_until_ac_power() -> i32;
 }
@@ -55,13 +56,11 @@ pub fn current() -> PowerState {
 }
 
 fn display_is_on() -> bool {
-    let Ok(output) = Command::new("ioreg").args(["-n", "IODisplayWrangler", "-d", "1"]).output() else {
-        return true;
-    };
-    let text = String::from_utf8_lossy(&output.stdout);
-    if let Some(value) = extract_int(&text, "\"CurrentPowerState\"=") {
-        return value >= 3;
+    #[cfg(target_os = "macos")]
+    unsafe {
+        return wallflow_display_is_on() != 0;
     }
+    #[cfg(not(target_os = "macos"))]
     true
 }
 
@@ -82,16 +81,6 @@ fn low_power_mode() -> bool {
         let line = line.trim();
         line.starts_with("lowpowermode") && line.contains('1')
     })
-}
-
-fn extract_int(haystack: &str, key: &str) -> Option<i32> {
-    let start = haystack.find(key)? + key.len();
-    haystack[start..]
-        .chars()
-        .take_while(|c| c.is_ascii_digit())
-        .collect::<String>()
-        .parse()
-        .ok()
 }
 
 #[cfg(test)]

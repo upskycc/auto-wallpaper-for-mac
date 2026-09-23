@@ -1,5 +1,6 @@
 #include <Availability.h>
 #include <CoreFoundation/CoreFoundation.h>
+#include <CoreGraphics/CoreGraphics.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/ps/IOPowerSources.h>
 #include <IOKit/ps/IOPSKeys.h>
@@ -24,23 +25,60 @@ static mach_port_t wallflow_iokit_port(void) {
     return port;
 }
 
-static int display_is_on(io_service_t service) {
+static int wrangler_is_on(io_service_t service) {
     CFNumberRef num = IORegistryEntryCreateCFProperty(
         service, CFSTR("CurrentPowerState"), kCFAllocatorDefault, 0);
     if (!num) {
-        return 1;
+        return -1;
     }
-    int value = 4;
+    int value = 0;
     CFNumberGetValue(num, kCFNumberIntType, &value);
     CFRelease(num);
     return value >= 3;
 }
 
+int wallflow_display_is_on(void) {
+    uint32_t count = 0;
+    if (CGGetOnlineDisplayList(0, NULL, &count) == kCGErrorSuccess) {
+        if (count == 0) {
+            return 0;
+        }
+        CGDirectDisplayID ids[32];
+        uint32_t n = 0;
+        if (CGGetOnlineDisplayList(32, ids, &n) == kCGErrorSuccess && n > 0) {
+            for (uint32_t i = 0; i < n; i++) {
+                if (CGDisplayIsActive(ids[i]) && !CGDisplayIsAsleep(ids[i])) {
+                    return 1;
+                }
+            }
+            return 0;
+        }
+    }
+
+    io_service_t service = IOServiceGetMatchingService(
+        wallflow_iokit_port(), IOServiceNameMatching("IODisplayWrangler"));
+    if (service) {
+        int on = wrangler_is_on(service);
+        IOObjectRelease(service);
+        if (on >= 0) {
+            return on;
+        }
+    }
+    return 1;
+}
+
 struct WaitCtx {
     CFRunLoopRef loop;
-    io_service_t service;
+    io_service_t wrangler;
     int display_on;
 };
+
+static void stop_if_on(struct WaitCtx *ctx) {
+    if (wallflow_display_is_on()) {
+        ctx->display_on = 1;
+        CFRunLoopStop(ctx->loop);
+    }
+}
 
 static void interest(
     void *refcon,
@@ -48,62 +86,80 @@ static void interest(
     uint32_t message_type,
     void *message_argument
 ) {
-    struct WaitCtx *ctx = (struct WaitCtx *)refcon;
     (void)service;
     (void)message_type;
     (void)message_argument;
-    if (display_is_on(ctx->service)) {
-        ctx->display_on = 1;
-        CFRunLoopStop(ctx->loop);
-    }
+    stop_if_on((struct WaitCtx *)refcon);
+}
+
+static void display_reconfig(
+    CGDirectDisplayID display,
+    CGDisplayChangeSummaryFlags flags,
+    void *user_info
+) {
+    (void)display;
+    (void)flags;
+    stop_if_on((struct WaitCtx *)user_info);
 }
 
 int wallflow_wait_until_display_on(void) {
-    io_service_t service = IOServiceGetMatchingService(
-        wallflow_iokit_port(), IOServiceNameMatching("IODisplayWrangler"));
-    if (!service) {
-        return 1;
-    }
-    if (display_is_on(service)) {
-        IOObjectRelease(service);
-        return 1;
-    }
-
-    IONotificationPortRef port = IONotificationPortCreate(wallflow_iokit_port());
-    if (!port) {
-        IOObjectRelease(service);
+    if (wallflow_display_is_on()) {
         return 1;
     }
 
     struct WaitCtx ctx;
     ctx.loop = CFRunLoopGetCurrent();
-    ctx.service = service;
+    ctx.wrangler = IO_OBJECT_NULL;
     ctx.display_on = 0;
 
-    io_object_t notifier = IO_OBJECT_NULL;
-    kern_return_t kr = IOServiceAddInterestNotification(
-        port,
-        service,
-        kIOGeneralInterest,
-        interest,
-        &ctx,
-        &notifier);
-    if (kr != KERN_SUCCESS) {
-        IONotificationPortDestroy(port);
-        IOObjectRelease(service);
-        return 1;
+    IONotificationPortRef note_port = IONotificationPortCreate(wallflow_iokit_port());
+    io_object_t wrangler_note = IO_OBJECT_NULL;
+    io_object_t root_note = IO_OBJECT_NULL;
+    CFRunLoopSourceRef src = NULL;
+
+    if (note_port) {
+        src = IONotificationPortGetRunLoopSource(note_port);
+        if (src) {
+            CFRunLoopAddSource(ctx.loop, src, kCFRunLoopDefaultMode);
+        }
+        ctx.wrangler = IOServiceGetMatchingService(
+            wallflow_iokit_port(), IOServiceNameMatching("IODisplayWrangler"));
+        if (ctx.wrangler) {
+            IOServiceAddInterestNotification(
+                note_port, ctx.wrangler, kIOGeneralInterest, interest, &ctx, &wrangler_note);
+        }
+        io_service_t root = IOServiceGetMatchingService(
+            wallflow_iokit_port(), IOServiceMatching("IOPMrootDomain"));
+        if (root) {
+            IOServiceAddInterestNotification(
+                note_port, root, kIOGeneralInterest, interest, &ctx, &root_note);
+            IOObjectRelease(root);
+        }
     }
 
-    CFRunLoopSourceRef src = IONotificationPortGetRunLoopSource(port);
-    CFRunLoopAddSource(ctx.loop, src, kCFRunLoopDefaultMode);
-    CFRunLoopRun();
-    CFRunLoopRemoveSource(ctx.loop, src, kCFRunLoopDefaultMode);
+    CGDisplayRegisterReconfigurationCallback(display_reconfig, &ctx);
 
-    if (notifier) {
-        IOObjectRelease(notifier);
+    while (!wallflow_display_is_on()) {
+        CFRunLoopRun();
     }
-    IONotificationPortDestroy(port);
-    IOObjectRelease(service);
+    ctx.display_on = 1;
+
+    CGDisplayRemoveReconfigurationCallback(display_reconfig, &ctx);
+    if (wrangler_note) {
+        IOObjectRelease(wrangler_note);
+    }
+    if (root_note) {
+        IOObjectRelease(root_note);
+    }
+    if (src) {
+        CFRunLoopRemoveSource(ctx.loop, src, kCFRunLoopDefaultMode);
+    }
+    if (note_port) {
+        IONotificationPortDestroy(note_port);
+    }
+    if (ctx.wrangler) {
+        IOObjectRelease(ctx.wrangler);
+    }
     return ctx.display_on;
 }
 

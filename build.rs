@@ -3,6 +3,7 @@ fn main() {
         cc::Build::new().file("src/display_wait.c").compile("display_wait");
         println!("cargo:rustc-link-lib=framework=IOKit");
         println!("cargo:rustc-link-lib=framework=CoreFoundation");
+        println!("cargo:rustc-link-lib=framework=CoreGraphics");
         println!("cargo:rerun-if-changed=src/display_wait.c");
     }
 }
