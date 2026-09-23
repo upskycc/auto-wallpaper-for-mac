@@ -51,7 +51,7 @@ path = "~/Pictures/Wallpapers"
 
 ## 日志
 
-默认不输出日志。要看日志，在 config 里打开开关并指定文件：
+默认不输出日志。要看日志，在 config 里打开开关并指定文件。顶层配置必须写在第一个 `[[sources]]` 之前，否则 TOML 会把它算进那个来源并报错：
 
 ```toml
 log_enabled = true

@@ -31,6 +31,7 @@ impl Default for ApplyTo {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Source {
     pub url: Option<String>,
     pub path: Option<String>,
@@ -39,6 +40,7 @@ pub struct Source {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     pub interval_minutes: u64,
     #[serde(default)]
@@ -223,6 +225,19 @@ url = "https://example.com/a.jpg"
             config.log_file.as_deref(),
             Some("~/Library/Logs/wallflow.log")
         );
+    }
+
+    #[test]
+    fn rejects_keys_placed_after_sources() {
+        let raw = r#"
+interval_minutes = 10
+
+[[sources]]
+url = "https://example.com/a.jpg"
+
+log_enabled = true
+"#;
+        assert!(toml::from_str::<Config>(raw).is_err());
     }
 
     #[test]

@@ -30,6 +30,9 @@ log_enabled = false
 # 不填则写到 stderr（前台运行可见；LaunchAgent 不会自动存文件）。
 # log_file = "~/Library/Logs/wallflow.log"
 
+# 注意：log_enabled / log_file 等顶层配置要写在第一个 [[sources]] 之前。
+# TOML 中 [[sources]] 之后的键都属于那个来源，写错位置会直接报错。
+
 # 壁纸来源，至少写一项。每一项只填 url 或 path 其中一个。
 # url：http/https 直链，下载后只保留当前这一张，上限 20MB，支持 jpg/png/gif/webp。
 # json_path：可选。填写后把 url 当 JSON 接口，按点路径取图片地址；data 既可以是对象也可以是数组。
