@@ -22,9 +22,13 @@ pause_on_battery = true
 # 下载远程图片的超时秒数。取值 1–120。仅对 [[sources]] 的 url 生效。
 download_timeout_secs = 15
 
-# true：守护进程把更换、跳过、错误打到 stderr。
+# true：守护进程输出更换、跳过、错误日志。
 # false：不输出运行日志。--install / --uninstall / --help 等命令行提示仍会打印。
 log_enabled = false
+
+# 日志写到哪个文件。~ 会展开成用户主目录，父目录会自动创建。
+# 不填则写到 stderr（前台运行可见；LaunchAgent 不会自动存文件）。
+# log_file = "~/Library/Logs/wallflow.log"
 
 # 壁纸来源，至少写一项。每一项只填 url 或 path 其中一个。
 # url：http/https 直链，下载后只保留当前这一张，上限 20MB，支持 jpg/png/gif/webp。

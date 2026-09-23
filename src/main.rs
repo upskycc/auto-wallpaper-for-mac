@@ -78,7 +78,7 @@ fn run() -> Result<(), String> {
         println!("已创建默认配置 {}", path.display());
     }
     let config = Config::load(&path)?;
-    crate::log::set_enabled(config.log_enabled);
+    crate::log::configure(config.log_enabled, config.log_target().as_deref());
     if once {
         rotate_once(&config);
         return Ok(());

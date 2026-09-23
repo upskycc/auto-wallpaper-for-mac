@@ -17,7 +17,7 @@ pub fn run_loop(config_path: &Path) {
     loop {
         match Config::load(config_path) {
             Ok(config) => {
-                log::set_enabled(config.log_enabled);
+                log::configure(config.log_enabled, config.log_target().as_deref());
                 let power = power::current();
                 if !power.allow_work(config.pause_when_display_off, config.pause_on_battery) {
                     if config.pause_when_display_off && !power.display_on {

@@ -53,6 +53,8 @@ pub struct Config {
     pub download_timeout_secs: u64,
     #[serde(default)]
     pub log_enabled: bool,
+    #[serde(default)]
+    pub log_file: Option<String>,
     pub sources: Vec<Source>,
 }
 
@@ -93,6 +95,11 @@ impl Config {
         if self.sources.is_empty() {
             return Err("至少需要一个 [[sources]]".into());
         }
+        if let Some(log_file) = &self.log_file {
+            if log_file.trim().is_empty() {
+                return Err("log_file 不能为空，不需要写文件就删掉这一项".into());
+            }
+        }
         for (index, source) in self.sources.iter().enumerate() {
             match (&source.url, &source.path, source.json_path.as_deref()) {
                 (Some(url), None, json_path) => {
@@ -115,6 +122,10 @@ impl Config {
 
     pub fn interval_secs(&self) -> u64 {
         self.interval_minutes.saturating_mul(60)
+    }
+
+    pub fn log_target(&self) -> Option<PathBuf> {
+        self.log_file.as_deref().map(crate::paths::expand_user)
     }
 }
 
@@ -139,6 +150,7 @@ mod tests {
         config.validate().unwrap();
         assert_eq!(config.interval_minutes, 30);
         assert!(!config.log_enabled);
+        assert_eq!(config.log_file, None);
         assert_eq!(config.sources.len(), 2);
     }
 
@@ -193,6 +205,36 @@ url = "https://example.com/a.jpg"
 "#;
         let config: Config = toml::from_str(raw).unwrap();
         assert!(!config.log_enabled);
+        assert_eq!(config.log_file, None);
+    }
+
+    #[test]
+    fn log_file_accepts_path() {
+        let raw = r#"
+interval_minutes = 10
+log_enabled = true
+log_file = "~/Library/Logs/wallflow.log"
+[[sources]]
+url = "https://example.com/a.jpg"
+"#;
+        let config: Config = toml::from_str(raw).unwrap();
+        config.validate().unwrap();
+        assert_eq!(
+            config.log_file.as_deref(),
+            Some("~/Library/Logs/wallflow.log")
+        );
+    }
+
+    #[test]
+    fn log_file_rejects_empty() {
+        let raw = r#"
+interval_minutes = 10
+log_file = "  "
+[[sources]]
+url = "https://example.com/a.jpg"
+"#;
+        let config: Config = toml::from_str(raw).unwrap();
+        assert!(config.validate().is_err());
     }
 
     #[test]

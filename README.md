@@ -25,8 +25,10 @@ pause_when_display_off = true
 pause_on_battery = true
 # 远程图下载超时，秒，1–120
 download_timeout_secs = 15
-# 守护进程是否把运行日志打到 stderr，默认关闭
+# 守护进程是否输出运行日志，默认关闭
 log_enabled = false
+# 可选：日志文件路径，不填写到 stderr
+# log_file = "~/Library/Logs/wallflow.log"
 
 [[sources]]
 url = "https://picsum.photos/id/1015/2560/1440"
@@ -46,6 +48,17 @@ path = "~/Pictures/Wallpapers"
 每次更换会先设桌面，再把同一张图写入锁屏（Sonoma 及之后改 `Index.plist` 并重启 WallpaperAgent）。锁屏写入失败时桌面已经换完，只跳过锁屏。
 
 改配置后保存即可，守护进程最多约 5 秒内重载并立即换一张，不用重启。
+
+## 日志
+
+默认不输出日志。要看日志，在 config 里打开开关并指定文件：
+
+```toml
+log_enabled = true
+log_file = "~/Library/Logs/wallflow.log"
+```
+
+`log_file` 不填时日志写到 stderr；LaunchAgent 不会自动把 stderr 存成文件，所以装成守护进程后想留档就填 `log_file`。父目录会自动创建，文件以追加方式写入。改动保存后最多约 5 秒生效。
 
 ## 在 Mac 上编译和安装
 
