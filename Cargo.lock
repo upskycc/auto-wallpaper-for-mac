@@ -504,6 +504,7 @@ name = "wallflow"
 version = "1.0.0"
 dependencies = [
  "cc",
+ "libc",
  "serde",
  "serde_json",
  "toml",

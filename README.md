@@ -1,6 +1,6 @@
 # wallflow
 
-macOS 自动更换壁纸。没有界面，全部走 TOML 配置。登录后由 LaunchAgent 常驻，按间隔同时换桌面和锁屏。
+macOS 自动更换壁纸。没有界面，全部走 TOML 配置。登录后由 LaunchAgent 常驻，按间隔换桌面。
 
 ## 配置
 
@@ -44,8 +44,6 @@ path = "~/Pictures/Wallpapers"
 ```
 
 没有 `json_path` 时 `url` 当图片直链。有 `json_path` 时按点路径从 JSON 取地址，对象和数组都能拆。取到多张时按 `mode` 选一张。相对路径按接口地址补全。解析失败则跳过这次，当前壁纸不动。
-
-每次更换会先设桌面，再把同一张图写入锁屏（Sonoma 及之后改 `Index.plist` 并重启 WallpaperAgent）。锁屏写入失败时桌面已经换完，只跳过锁屏。
 
 改配置后保存即可，守护进程最多约 5 秒内重载并立即换一张，不用重启。
 

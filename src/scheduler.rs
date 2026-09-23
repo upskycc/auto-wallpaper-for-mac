@@ -9,7 +9,7 @@ use crate::log;
 use crate::power;
 use crate::sources::{collect_items, next_index, WallpaperRef};
 use crate::state::RotateState;
-use crate::wallpaper::apply_wallpaper;
+use crate::wallpaper::apply_desktop;
 
 pub fn run_loop(config_path: &Path) {
     let mut last_rotate: Option<Instant> = None;
@@ -71,7 +71,7 @@ pub fn rotate_once(config: &Config) {
     };
     let item = &items[index];
     let result = resolve_file(item, config.download_timeout_secs, random).and_then(|(path, label)| {
-        apply_wallpaper(&path, &config.apply_to)?;
+        apply_desktop(&path, &config.apply_to)?;
         if matches!(item, WallpaperRef::Url(_) | WallpaperRef::JsonApi { .. }) {
             crate::cache::keep_only(&path);
         }
