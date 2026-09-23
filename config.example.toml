@@ -1,5 +1,5 @@
 # 两次更换壁纸的间隔，单位分钟。取值 1–1440（最多一天一次）。
-interval_minutes = 30
+interval_minutes = 1
 
 # 轮换顺序。
 # sequential：按 sources 从上到下依次换，到末尾再从头。
@@ -24,11 +24,11 @@ download_timeout_secs = 15
 
 # true：守护进程输出更换、跳过、错误日志。
 # false：不输出运行日志。--install / --uninstall / --help 等命令行提示仍会打印。
-log_enabled = false
+log_enabled = true
 
 # 日志写到哪个文件。~ 会展开成用户主目录，父目录会自动创建。
 # 不填则写到 stderr（前台运行可见；LaunchAgent 不会自动存文件）。
-# log_file = "~/Library/Logs/wallflow.log"
+log_file = "~/Library/Logs/wallflow.log"
 
 # 注意：log_enabled / log_file 等顶层配置要写在第一个 [[sources]] 之前。
 # TOML 中 [[sources]] 之后的键都属于那个来源，写错位置会直接报错。
